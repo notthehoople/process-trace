@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
-	//"strings"
 )
 
 func processInput(debug bool) {
@@ -37,7 +37,7 @@ func processInput(debug bool) {
 			// Holds the string that scanned
 			readText := scanner.Text()
 			if len(readText) != 0 {
-				if readText == "@usecs:" {
+				if strings.HasPrefix(readText, "@usecs:") {
 
 					if debug {
 						fmt.Println("Found usecs line")
