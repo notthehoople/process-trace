@@ -5,14 +5,18 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 func processInput(debug bool) {
-	var readResult, readResultShort int = 0, 0
+	var readResult int
 	var lowerBucket, upperBucket, cpuLatency int
-	var timeCounter int = 0
+	var timeCounter int
+	var lowerBucketString string
+	var lowBucketValString string
+	var cpuLatencyVal int
 
 	// Setup at process start
 
@@ -25,13 +29,13 @@ func processInput(debug bool) {
 		fmt.Println("Hostname:", hostName)
 	}
 
-	bucketValueMap := make(map[int]int)
+	bucketValueMap := make(map[string]int)
 	scanner := bufio.NewScanner(os.Stdin)
 
 	// We want the service to run forever, so loop forever
 	for {
 
-		for timeCounter = 0; timeCounter < 16; {
+		for timeCounter = 0; timeCounter < 15; {
 			// Scans a line from Stdin(Console)
 			scanner.Scan()
 			// Holds the string that scanned
@@ -39,40 +43,58 @@ func processInput(debug bool) {
 			if len(readText) != 0 {
 				if strings.HasPrefix(readText, "@usecs:") {
 
-					if debug {
-						fmt.Println("Found usecs line")
-					}
+					//					if debug {
+					fmt.Println("Found usecs line")
+					//					}
 
+					// BUG HERE. WE FIND A NEW usecs THEN WE PROCESS THE RESULTS WE'VE SEEN. WE'RE ALWAYS OUT OF ORDER AT THIS POINT
+					// SEE output FILE
 					timeCounter++
 				} else {
-					readResult, _ = fmt.Sscanf(readText, "[%d, %d) %d", &lowerBucket, &upperBucket, &cpuLatency)
-					fmt.Println("readResult:", readResult)
+					fmt.Println("Found a line to process")
+					// Need to test for an empty line, or badly formatted line and deal with that
+					readResult, _ = fmt.Sscanf(readText, "[%d] %d", &lowerBucket, &cpuLatency)
 
-					// If we have read lines of the correct format, parse them and retain the cpuLatency
-					if readResult > 0 {
-						if readResult == 1 {
-							readResultShort, _ = fmt.Sscanf(readText, "[%d] %d", &lowerBucket, &cpuLatency)
-							fmt.Println("readResultShort:", readResultShort)
-							if debug {
-								fmt.Println("Line Read: ", readText)
-								fmt.Println("lowerBucket: ", lowerBucket)
-								fmt.Println("cpuLatency: ", cpuLatency)
-							}
-						} else {
-							if debug {
-								fmt.Println("Line Read: ", readText)
-								fmt.Println("lowerBucket: ", lowerBucket)
-								fmt.Println("upperBucket: ", upperBucket)
-								fmt.Println("cpuLatency: ", cpuLatency)
-							}
-						}
-
-						bucketValueMap[lowerBucket] += cpuLatency
-					} else {
-						if debug {
-							fmt.Println("FAILED: ", readText)
-						}
+					if debug {
+						fmt.Println("readResult on readText:", readResult, readText)
 					}
+
+					if readResult == 2 {
+						lowerBucketString = strconv.Itoa(lowerBucket)
+					} else {
+
+						switch strings.Count(readText, "K") {
+						case 0:
+							if debug {
+								fmt.Println("No Ks")
+							}
+							readResult, _ = fmt.Sscanf(readText, "[%d, %d) %d", &lowerBucket, &upperBucket, &cpuLatency)
+							lowerBucketString = strconv.Itoa(lowerBucket)
+						case 1:
+							if debug {
+								fmt.Println("1 Ks")
+							}
+							readResult, _ = fmt.Sscanf(readText, "[%d, %dK) %d", &lowerBucket, &upperBucket, &cpuLatency)
+							lowerBucketString = strconv.Itoa(lowerBucket)
+						case 2:
+							if debug {
+								fmt.Println("2 Ks")
+							}
+							readResult, _ = fmt.Sscanf(readText, "[%dK, %dK) %d", &lowerBucket, &upperBucket, &cpuLatency)
+							lowerBucketString = strconv.Itoa(lowerBucket) + "K"
+						}
+						//readResult, _ = fmt.Sscanf(readText, "[%d, %d) %d", &lowerBucket, &upperBucket, &cpuLatency)
+						//readResult, _ = fmt.Sscanf(readText, "[%s, %s) %d", &lowerBucketString, &upperBucketString, &cpuLatency)
+
+					}
+
+					if debug {
+						fmt.Println("readResult:", readResult)
+						fmt.Println("lowerBucketString:", lowerBucketString)
+						fmt.Println("cpuLatency:", cpuLatency)
+					}
+
+					bucketValueMap[lowerBucketString] += cpuLatency
 				}
 			}
 		}
@@ -88,8 +110,8 @@ func processInput(debug bool) {
 		timeNow := time.Now()
 		unixEpoch := timeNow.Unix()
 
-		for lowBucketVal, cpuLatencyVal := range bucketValueMap {
-			fmt.Printf("%s.cpu-lat.%d %d %d\n", hostName, lowBucketVal, cpuLatencyVal, unixEpoch)
+		for lowBucketValString, cpuLatencyVal = range bucketValueMap {
+			fmt.Printf("%s.cpu-lat.%s %d %d\n", hostName, lowBucketValString, cpuLatencyVal, unixEpoch)
 		}
 
 		// Send data
@@ -100,9 +122,10 @@ func processInput(debug bool) {
 
 		// Now we've delivered our data, clear the map and let's go again
 		for k := range bucketValueMap {
-			delete(bucketValueMap, k)
+			bucketValueMap[k] = 0
 		}
-		timeCounter = 0
+		fmt.Println("timeCounter is:", timeCounter)
+		fmt.Println(bucketValueMap)
 	}
 
 }
@@ -116,12 +139,12 @@ func main() {
 	flag.Parse()
 
 	if debug {
-		fmt.Println("[debug] Calling main routine\n")
+		fmt.Println("[debug] Calling main routine")
 	}
 
 	processInput(debug)
 
 	if debug {
-		fmt.Println("[debug] Returned from main routine\n")
+		fmt.Println("[debug] Returned from main routine")
 	}
 }
