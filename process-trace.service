@@ -1,0 +1,16 @@
+[Unit]
+Description=Process Trace Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+ExecStart=/bin/bash /root/src/process-trace/wrapper
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=5s
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
