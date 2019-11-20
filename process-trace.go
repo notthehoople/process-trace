@@ -32,10 +32,11 @@ func processInput(debug bool) {
 	bucketValueMap := make(map[string]int)
 	scanner := bufio.NewScanner(os.Stdin)
 
+	timeCounter = 0
 	// We want the service to run forever, so loop forever
 	for {
 
-		for timeCounter = 0; timeCounter < 15; {
+		for timeCounter < 16 {
 			// Scans a line from Stdin(Console)
 			scanner.Scan()
 			// Holds the string that scanned
@@ -43,15 +44,12 @@ func processInput(debug bool) {
 			if len(readText) != 0 {
 				if strings.HasPrefix(readText, "@usecs:") {
 
-					//					if debug {
-					fmt.Println("Found usecs line")
-					//					}
+					if debug {
+						fmt.Println("Found usecs line")
+					}
 
-					// BUG HERE. WE FIND A NEW usecs THEN WE PROCESS THE RESULTS WE'VE SEEN. WE'RE ALWAYS OUT OF ORDER AT THIS POINT
-					// SEE output FILE
 					timeCounter++
 				} else {
-					fmt.Println("Found a line to process")
 					// Need to test for an empty line, or badly formatted line and deal with that
 					readResult, _ = fmt.Sscanf(readText, "[%d] %d", &lowerBucket, &cpuLatency)
 
@@ -124,8 +122,9 @@ func processInput(debug bool) {
 		for k := range bucketValueMap {
 			bucketValueMap[k] = 0
 		}
-		fmt.Println("timeCounter is:", timeCounter)
-		fmt.Println(bucketValueMap)
+
+		// Set timeCounter to 1 since we've already seen the next usecs line
+		timeCounter = 1
 	}
 
 }
