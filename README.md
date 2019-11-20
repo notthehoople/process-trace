@@ -5,7 +5,14 @@ Takes the output from bpftrace and processes it ready for sending to Graphite
 ### wrapper
 The wrapper script that runs bpftrace and sends output to process-trace which processes the data delivered, then uploads to Graphite
 ### process-trace.service
-systemd service description. Set to keep the bpftrace and process-trace service running and delivering data
+systemd service configuration. Set to keep the bpftrace and process-trace service running and delivering data non-interactively.
+To install:
+- cp process-trace.service /etc/systemd/system
+- chmod 644 /etc/systemd/system/process-trace.service
+- systemctl daemon-reload
+- systemctl status process-trace
+- systemctl start process-trace
+- systemctl enable process-trace    # Assuming the service should restart after a reboot
 ### process-trace.go
 Processing script. At a high level the code:
 - Looks for "@usecs:" in the data coming in. One of these should appear every second from bpftrace
